@@ -72,10 +72,9 @@ Sie ermöglichen es, die Eigenschaften und Beziehungen von Objekten zu beschreib
 
 Wie bereits in Abschnitt \ref{sec:einleitung} beschrieben, verfolgt die Constraint-Programmierung einen deklarativen Ansatz.
 Dabei wird ein Problem modelliert, indem folgende, elementare Bestandteile beschrieben werden: die Variablen, deren Wertebereiche sowohl vordefinierte als auch benutzerdefinierte Constraints, die die Variablen zueinander in Beziehung setzen und den Lösungsraum einschränken.
-Die Modellierungsmethoden der zu vergleichenden Constraint-Systeme werden jeweils in Abschnitt \ref{sec:clpfd} (CLP(FD)) und Abschnitt \ref{sec:ortools} (Google OR-Tools) im Detail beschrieben. 
 
-Ein modelliertes Problem wird anschließend durch den sogenannten Constraint-Solver gelöst.
-Dabei handelt es sich um eine spezielle Softwarekomponente, die die Erfüllbarkeit eines Constraint-Problems prüft und konkrete Lösungen für eben dieses berechnen kann.
+Ein modelliertes Problem wird anschließend durch einen Constraint-Solver gelöst.
+Dabei handelt es sich um eine spezielle Softwarekomponente, die die Erfüllbarkeit eines Constraint-Problems prüft und konkrete Lösungen für eben dieses berechnen kann \cite{drt,clp_book2}.
 
 \noindent
 Das Vorgehen eines klassischen Constraint-Solvers besteht aus drei grundlegenden Schritten:
@@ -99,7 +98,7 @@ Dieser Vorgang wird wiederholt, bis ein stabiler Zustand (Fixpunkt) erreicht ist
 \label{sec:backtracking}
 Getroffene Variablenbelegungen sowie die daraus resultierenden Propagationen lassen sich durch einen Entscheidungsbaum darstellen.
 Stellt der Solver während der Expansion des Baumes einen Konflikt mit anderen Constraints fest, dann wird im Entscheidungsbaum zum vorherigen Entscheidungsknoten zurückgesprungen und trifft -- wenn möglich -- eine andere Wahl.
-Dieser Prozess wird als Backtracking bezeichnet. \cite{clp_handbook}
+Dieser Prozess wird als Backtracking bezeichnet \cite{clp_handbook}. 
 Sollte keine weitere Alternative zur Verfügung stehen, dann wird das Prüfen auf Alternativen und eventuelles Zurücksetzen rekursiv fortgeführt, potentiell bis zur Wurzel.
 Dort endet die Suche.
 
@@ -110,7 +109,9 @@ In nicht-monotonen Systemen kann die Reihenfolge der Constraint-Angaben zu unter
 
 Für das Constraint-System selbst stellt nicht-monotones Verhalten kein Problem dar, es kann jedoch die Fehlersuche im Entwicklungsprozess erschweren.
 
-Monotonie lässt sich syntaktisch erzwingen, was zwar die Ausdrucksmöglichkeiten einschränkt, jedoch konsistente Ergebnisse gewährleistet.
+Zur Lösung des Problems existieren unterschiedliche Ansätze: Eine Möglichkeit besteht darin, Monotonie syntaktisch zu erzwingen, was zwar die Modellierung etwas einschränkt, jedoch konsistente Ergebnisse gewährleistet.
+Alternativ setzen einige Solver-Architekturen bereits von Grund auf auf ein monotones Modell, wodurch die Eigenschaft inhärent gegeben ist.
+Konkrete Ausprägungen dieser Ansätze werden in Abschnitt \ref{sec:monotonie} im Rahmen des Vergleichs erläutert.
 \subsection{CLP(FD) in SWI-Prolog}
 \label{sec:clpfd}
 Die folgenden Erläuterungen stützen sich auf die Dissertation \cite{drt} sowie einen Artikel \cite{clpfd} von Markus Triska, in denen zentrale Eigenschaften und Designentscheidungen der CLP(FD)-Bibliothek dargestellt werden.
@@ -141,14 +142,17 @@ Die Zeilen zwei bis vier entsprechen den ersten beiden Schritten: Variablen dekl
 In Zeile 5 wird mit \texttt{label/1} die Suche gestartet. 
 
 Das Suchen nach einer Lösung für das modellierte Problem wird vom Constraint-Solver von CLP(FD) durchgeführt.
-Dabei ist die garantierte Terminierung der Propagation eine zentrale Eigenschaft.
-Sie wird realisiert, indem die Grenzwerte des Wertebereiches einer endlichen Variable jeweils höchstens einmal verändert werden dürfen. 
-Es kann also keine Endlosschleife entstehen, in welcher der Solver alternierend Grenzwerte erhöht und verringert.
+Dabei ist die garantierte Terminierung der Propagation eine zentrale Eigenschaft, da SWI-Prolog Variablen mit unendlichem Wertebereich unterstützt.
+Ohne Einschränkung könnte eine Propagation in diesem Fall nie terminieren, da eine Schranke einer unendlichen Variablen beliebig oft erhöht oder verringert werden kann.
+Um dies zu verhindern, dürfen die Schranken sowie deren Spanne bei einer unendlichen Variablen nur einmal verändert werden.
+Dadurch kann keine Endlosschleife entstehen, in der der Solver unendlich lang die Schranken verändert, ohne Fortschritt in der Propagation zu erzielen.
 
-Eine weitere Besonderheit von CLP(FD) ist die Unterstützung beliebig großer Ganzzahlen.
-Insbesondere auf Systemen mit 32-bit-Architektur kann diese Eigenschaft von Vorteil sein, da beim Lösen eines Constraint-Problems Zwischenergebnisse auftreten können, die zu Überläufen führen.
+Beim Lösen von Constraint-Problemen können mitunter sehr große Zwischenergebnisse auftreten, die in einigen Systemen zu Überläufen führen.
+CLP(FD) in SWI-Prolog unterstützt daher beliebig große Ganzzahlen und kann mit unendlichen Wertebereichen arbeiten.
+Dies erweitert den Anwendungsbereich, da sich auch Probleme mit natürlich großen oder theoretisch unendlichen Domänen modellieren lassen, ohne auf spezielle Arithmetik ausweichen zu müssen.
+Insbesondere auf 32-bit-Systemen ist diese Eigenschaft von Vorteil, da dort Überläufe deutlich schneller auftreten als auf moderneren 64-bit-Systemen.
 
-Während die garantierte Terminierung eine Eigenschaft des Constraint-Solvers ist, betreffen die Unterstützung beliebig großer Ganzzahlen sowie die Möglichkeit zur erzwungenen Monotonie die gesamte CLP(FD)-Bibliothek.
+Während die garantierte Terminierung eine Eigenschaft des Constraint-Solvers ist, betreffen die Unterstützung beliebig großer Ganzzahlen sowie die Möglichkeit Monotonie syntaktisch zu erzwingen die gesamte CLP(FD)-Bibliothek.
 
 \subsection{Google OR-Tools und der CP-SAT-Solver}
 \label{sec:ortools}
@@ -170,7 +174,6 @@ Zur Demonstration folgt dasselbe Modell wie in Abschnitt \ref{sec:clpfd}:
 
 \begin{Verbatim}[numbers=left, xleftmargin=5mm, frame=lines]
     from ortools.sat.python import cp_model as cp
-
     m = cp.CpModel()
     X = m.NewIntVar(1, 10, "X")
     Y = m.NewIntVar(1, 10, "Y")
@@ -180,7 +183,6 @@ Zur Demonstration folgt dasselbe Modell wie in Abschnitt \ref{sec:clpfd}:
     m.Add(X + Y + Z == 15)
     s = cp.CpSolver()
     s.Solve(m)
-
 \end{Verbatim}
 
 Die grundlegende Architektur des Solvers ist ein hybrider Portfolio-Ansatz, das heißt es werden mehrere unterschiedliche Heuristiken sowie Suchverfahren parallel mittels mehrerer Threads ausgeführt \cite{perron}.
@@ -204,11 +206,30 @@ Die Resultate zeigen, dass CLP(FD) in Kombination mit SWI-Prolog im Vergleich ei
 Aufgrund seiner Eigenschaften wird es jedoch weiterhin für Lehr- und Forschungszwecke eingesetzt.
 Zudem ist CLP(FD) der einzige getestete Solver, der beliebig große Ganzzahlen unterstützt. 
 \section{Vergleich von CLP(FD) und CP-SAT}
+\subsection{Interne Modellverarbeitung}
+Variablen werden in CLP(FD) als \emph{attributed variables} gespeichert.
+Dies umfasst den aktuellen Wertebereich, sowie alle Propagatoren, die bei einer Änderung an der Variable überprüft werden müssen.
+Zusätzlich speichern attributed variables -- wenn die Variable noch unendlich ist -- ob eine Schranke oder die Spanne des Wertebereichs geändert wurde.
+
+
+
 \subsection{Suchverfahren und Propagation}
 \label{sec:search_prop}
-CLP(FD) nutzt klassische Propagation mit Domain Consistency, Backtracking und verwendet Labeling für die Auswahl der Variablen.
+CLP(FD) in SWI-Prolog verwendet ein klassisches, sequentielles Suchverfahren.
+Dabei werden Variablen in einer vom Anwender wählbaren oder durch Heuristiken bestimmten Reihenfolge belegt (\emph{Labeling}).
+Jede Belegung wird unmittelbar durch Constraint-Propagation überprüft.
+Als Konsistenzniveau wird dabei \emph{Domain Consistency} angestrebt, d.\,h. für jede Variable wird sichergestellt, dass jeder verbleibende Wert mit allen Constraints vereinbar ist.
+Tritt eine Inkonsistenz auf, greift der Solver auf Backtracking zurück, um alternative Belegungen zu prüfen.
+Die Suche erfolgt grundsätzlich in einem einzelnen Thread.
 
-\subsection{Interne Modellverarbeitung}
+Der CP-SAT-Solver aus Google OR-Tools verfolgt hingegen einen hybriden Portfolio-Ansatz.
+Mehrere Suchstrategien und Heuristiken werden parallel in separaten Threads (workers) ausgeführt \cite{perron}.
+Neben klassischer Constraint-Propagation kommen Techniken aus dem SAT-Solving zum Einsatz, darunter Konfliktanalyse mit \emph{Conflict-Driven Clause Learning} (CDCL) und Lazy Clause Generation.
+Diese Verfahren ermöglichen es, aus Konflikten während der Suche neue Klauseln abzuleiten, die den Suchraum dauerhaft einschränken.
+Informationen wie engere Wertebereichsgrenzen oder Teillösungen werden zwischen den Threads kontinuierlich ausgetauscht, wodurch unterschiedliche Suchstränge voneinander profitieren können. 
+
+Während CLP(FD) inkrementell arbeitet und jede Entscheidung unmittelbar propagiert, formuliert CP-SAT das Modell in eine erweiterte SAT-Form um und kombiniert diese mit Ganzzahlarithmetik.
+Die Propagation orientiert sich dabei an \emph{Bound Consistency} und SAT-Klauselpropagation, wodurch sich in vielen Fällen eine schnellere Eingrenzung des Suchraums ergibt.
 \subsection{Monotonie}
 \label{sec:monotonie}
 
