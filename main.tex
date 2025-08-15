@@ -75,7 +75,7 @@ Dabei wird ein Problem modelliert, indem folgende, elementare Bestandteile besch
 Die Modellierungsmethoden der zu vergleichenden Constraint-Systeme werden jeweils in Abschnitt \ref{sec:clpfd} (CLP(FD)) und Abschnitt \ref{sec:ortools} (Google OR-Tools) im Detail beschrieben. 
 
 Ein modelliertes Problem wird anschließend durch den sogenannten Constraint-Solver gelöst.
-Dabei handelt es sich um eine spezielle Softwarekomponente, die die Erfüllbarkeit eines Constraint-Problems prüfen und konkrete Lösungen für eben dieses berechnen kann.
+Dabei handelt es sich um eine spezielle Softwarekomponente, die die Erfüllbarkeit eines Constraint-Problems prüft und konkrete Lösungen für eben dieses berechnen kann.
 
 \noindent
 Das Vorgehen eines klassischen Constraint-Solvers besteht aus drei grundlegenden Schritten:
@@ -90,34 +90,25 @@ In diesem Abschnitt werden zentrale Mechanismen und Eigenschaften vorgestellt, w
 Die konkrete Ausprägung von eben diesen ist abhängig vom jeweiligen Solver.
 \subsubsection{Propagation}
 Propagation bezeichnet die Ableitung logischer Konsequenzen aus bestehenden Constraints und den aktuellen Wertebereichen der Variablen \cite{clp92}.
-Im Kern geht es also darum, inkonsistente Werte aus den Wertebereichen zu entfernen.
-Als \glqq inkonsistent\grqq{} wird in diesem Kontext ein Wert für eine Variable beschrieben, mit welchem ein Constraint (oder mehrere) nicht mehr erfüllt werden kann.
+Es geht im Kern darum, inkonsistente Werte aus den jeweiligen Wertebereichen zu entfernen.
+Als \glqq inkonsistent\grqq{} wird in diesem Kontext eine Belegung für eine Variable beschrieben, mit welcher ein Constraint (oder mehrere) nicht mehr erfüllt werden kann.
 
 Constraint-Systeme nutzen hierzu Propagatoren, die auf Änderungen in den Wertebereichen reagieren und ggf. diese inkonsistenten Werte entfernen.
 Dieser Vorgang wird wiederholt, bis ein stabiler Zustand (Fixpunkt) erreicht ist, bei dem keine weitere Reduzierung möglich ist \cite{clp_handbook}.
-
-Die Stärke der Propagation hängt davon ab, welche Form der Konsistenz ein Solver durchsetzt.
-In der Literatur werden hierfür unterschiedliche Konsistenzbegriffe beschrieben sowie zwischen lokaler Konsistenz -- also der Prüfung auf Widerspruchsfreiheit in einzelnen Teilbereichen des Constraint-Problems -- und globaler Konsistenz -- der Prüfung im Kontext des gesamten Constraint-Problems -- unterschieden.
-
-Eine wichtige Form lokaler Konsistenz ist die \emph{Arc Consistency} (Kantenkonsistenz).
-Sie besagt, dass für jede Variable und jeden Wert in ihrem Wertebereich mindestens ein Wert im Wertebereich jeder anderen mit ihr über ein Constraint verbundenen Variable existiert, sodass das Constraint erfüllt wird \cite{clp_handbook}.
-
-Eine stärkere Form der Arc Consistency ist die \emph{Domain Consistency}. Sie verallgemeinert das Konzept der Kantenkonsistenz.
-Bei ihr muss jeder Wert eines Wertebereichs kantenkonsistent sein. Sie wird unter anderem in CLP(FD) verwendet \cite{drt}.
-Wenn es sich ausschließlich um binäre Constraints handelt -- also Constraints zwischen genau zwei Variablen -- dann ist Arc Consistency mit Domain Consistency gleichzusetzen.
-
-Je nach dem wie stark einschränkend eine Konsistenz ist, desto schneller ist die Suche nach Lösungen -- der Suchraum wird dadurch schließlich schon vor der eigentlichen Suche reduziert --, jedoch steigt damit auch der Rechenaufwand pro Propagationsschritt.
 \subsubsection{Backtracking}
 \label{sec:backtracking}
 Getroffene Variablenbelegungen sowie die daraus resultierenden Propagationen lassen sich durch einen Entscheidungsbaum darstellen.
 Stellt der Solver während der Expansion des Baumes einen Konflikt mit anderen Constraints fest, dann wird im Entscheidungsbaum zum vorherigen Entscheidungsknoten zurückgesprungen und trifft -- wenn möglich -- eine andere Wahl.
-Sollte keine weitere Alternative zur Verfügung stehen, dann wird das Prüfen auf Alternativen und eventuelle Zurücksetzen rekursiv fortgeführt, potentiell bis zur Wurzel.
+Dieser Prozess wird als Backtracking bezeichnet. \cite{clp_handbook}
+Sollte keine weitere Alternative zur Verfügung stehen, dann wird das Prüfen auf Alternativen und eventuelles Zurücksetzen rekursiv fortgeführt, potentiell bis zur Wurzel.
 Dort endet die Suche.
 
 Wird der Entscheidungsbaum während des Backtrackings vollständig expandiert, dann gibt es keine Lösung für das modellierte Problem \cite{clp_book2}.
 \subsubsection{Monotonie}
 Ein Constraint-System heißt monoton, wenn das Hinzufügen weiterer Constraints keine neuen Lösungen erzeugt \cite{drt}\cite{swi-clpfd-doc}.
 In nicht-monotonen Systemen kann die Reihenfolge der Constraint-Angaben zu unterschiedlichen Ergebnissen führen, wie Triska \cite[S. 37]{drt} anhand zweier identischer, lediglich in der Reihenfolge variierender Anfragen zeigt.
+
+Für das Constraint-System selbst stellt nicht-monotones Verhalten kein Problem dar, es kann jedoch die Fehlersuche im Entwicklungsprozess erschweren.
 
 Monotonie lässt sich syntaktisch erzwingen, was zwar die Ausdrucksmöglichkeiten einschränkt, jedoch konsistente Ergebnisse gewährleistet.
 \subsection{CLP(FD) in SWI-Prolog}
@@ -149,8 +140,9 @@ Um das Vorgehen zu veranschaulichen folgt ein einfaches Beispiel zur Constraint-
 Die Zeilen zwei bis vier entsprechen den ersten beiden Schritten: Variablen deklarieren und Constraints setzen.
 In Zeile 5 wird mit \texttt{label/1} die Suche gestartet. 
 
-Das Suchen nach einer Lösung für das modellierte Problem wird dann vom Constraint-Solver von CLP(FD) durchgeführt.
-Dabei ist die garantierte Terminierung der Propagation eine zentrale Eigenschaft. Sie wird realisiert, indem die Grenzwerte des Wertebereiches einer endlichen Variable jeweils höchstens einmal verändert werden dürfen. 
+Das Suchen nach einer Lösung für das modellierte Problem wird vom Constraint-Solver von CLP(FD) durchgeführt.
+Dabei ist die garantierte Terminierung der Propagation eine zentrale Eigenschaft.
+Sie wird realisiert, indem die Grenzwerte des Wertebereiches einer endlichen Variable jeweils höchstens einmal verändert werden dürfen. 
 Es kann also keine Endlosschleife entstehen, in welcher der Solver alternierend Grenzwerte erhöht und verringert.
 
 Eine weitere Besonderheit von CLP(FD) ist die Unterstützung beliebig großer Ganzzahlen.
