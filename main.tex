@@ -214,12 +214,10 @@ Zusätzlich enthält eine attributed variable die zugehörigen Propagatoren, die
 Falls die Domäne unendlich ist, wird außerdem markiert, ob eine Schranke oder die Spanne des Bereichs verändert wurde.
 CLP(FD) behält dabei die ursprünglichen Wertebereiche bei: Die Modellierungsebene und die interne Repräsentation stimmen also weitgehend überein \cite{drt}.
 
-Demgegenüber verwendet CP-SAT Techniken des SAT-Solvings.
-Essentiell für die Anwendung von SAT-Verfahren auf ein Constraint-Problem ist die vorangestellte Transformation des Modells in eine Menge von booleschen SAT-Klauseln.
-Dabei werden zunächst einige Grundstrukturen des Modells umgewandelt, also die Variablen, deren Wertebereiche und lokale Constraints.
-Dafür kommt \emph{Lazy Clause Generation} (LCG) zum Einsatz.
-Das bedeutet, dass nur SAT-Klauseln erzeugt werden, wenn diese auch benötigt werden \cite{Stuckey2010}.
-Globale Constraints bleiben hingegen spezielle Propagatoren und lösen nur bei Konflikt LCG aus.
+CP-SAT hingegen kombiniert Constraint-Programmierung mit Techniken des SAT-Solvings.
+Dabei wird das Problem so repräsentiert, dass sich Variablen, Wertebereiche und Constraints bei Bedarf als SAT-Klauseln erklären lassen.
+Anstelle einer vollständigen Vortransformation werden mithilfe von \emph{Lazy Clause Generation} (LCG) nur dann Klauseln erzeugt, wenn sie zur Begründung von Propagation oder zur Analyse von Konflikten benötigt werden \cite{Stuckey2010}.
+Globale Constraints bleiben als spezialisierte Propagatoren erhalten und interagieren mit dem SAT-Solver, indem sie bei Bedarf Klauseln erzeugen, die die jeweilige Inferenz oder den Konflikt erklären und damit zukünftige Konflikte ausschließen \cite{cp-sat-primer}.
 
 
 
@@ -228,7 +226,7 @@ Globale Constraints bleiben hingegen spezielle Propagatoren und lösen nur bei K
 CLP(FD) in SWI-Prolog verwendet ein klassisches, sequentielles Suchverfahren.
 Dabei werden Variablen in einer vom Anwender wählbaren oder durch Heuristiken bestimmten Reihenfolge belegt (\emph{Labeling}).
 Jede Belegung wird unmittelbar durch Constraint-Propagation überprüft.
-Als Konsistenzniveau wird dabei \emph{Domain Consistency} angestrebt, d.\,h. für jede Variable wird sichergestellt, dass jeder verbleibende Wert mit allen Constraints vereinbar ist.
+Als Konsistenzniveau wird dabei \emph{Domain Consistency} angestrebt, es wird also für jede Variable sichergestellt, dass jeder verbleibende Wert mit allen Constraints vereinbar ist.
 Tritt eine Inkonsistenz auf, greift der Solver auf Backtracking zurück, um alternative Belegungen zu prüfen.
 Die Suche erfolgt grundsätzlich in einem einzelnen Thread.
 
