@@ -207,9 +207,19 @@ Aufgrund seiner Eigenschaften wird es jedoch weiterhin für Lehr- und Forschungs
 Zudem ist CLP(FD) der einzige getestete Solver, der beliebig große Ganzzahlen unterstützt. 
 \section{Vergleich von CLP(FD) und CP-SAT}
 \subsection{Interne Modellverarbeitung}
-Variablen werden in CLP(FD) als \emph{attributed variables} gespeichert.
-Dies umfasst den aktuellen Wertebereich, sowie alle Propagatoren, die bei einer Änderung an der Variable überprüft werden müssen.
-Zusätzlich speichern attributed variables -- wenn die Variable noch unendlich ist -- ob eine Schranke oder die Spanne des Wertebereichs geändert wurde.
+In CLP(FD) werden Variablen als \emph{attributed variables} repräsentiert. 
+Diese enthalten den aktuellen Wertebereich, der intern als Intervallbaum gespeichert wird. 
+Damit lassen sich Schnitt-, Such- und Vereinigungsoperationen auf Wertebereichen effizienter durchführen. 
+Zusätzlich enthält eine attributed variable die zugehörigen Propagatoren, die bei Änderungen des Wertebereichs aktiviert werden. 
+Falls die Domäne unendlich ist, wird außerdem markiert, ob eine Schranke oder die Spanne des Bereichs verändert wurde.
+CLP(FD) behält dabei die ursprünglichen Wertebereiche bei: Die Modellierungsebene und die interne Repräsentation stimmen also weitgehend überein \cite{drt}.
+
+Demgegenüber verwendet CP-SAT Techniken des SAT-Solvings.
+Essentiell für die Anwendung von SAT-Verfahren auf ein Constraint-Problem ist die vorangestellte Transformation des Modells in eine Menge von booleschen SAT-Klauseln.
+Dabei werden zunächst einige Grundstrukturen des Modells umgewandelt, also die Variablen, deren Wertebereiche und lokale Constraints.
+Dafür kommt \emph{Lazy Clause Generation} (LCG) zum Einsatz.
+Das bedeutet, dass nur SAT-Klauseln erzeugt werden, wenn diese auch benötigt werden \cite{Stuckey2010}.
+Globale Constraints bleiben hingegen spezielle Propagatoren und lösen nur bei Konflikt LCG aus.
 
 
 
