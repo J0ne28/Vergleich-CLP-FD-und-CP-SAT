@@ -218,13 +218,10 @@ CP-SAT hingegen kombiniert Constraint-Programmierung mit Techniken des SAT-Solvi
 Dabei wird das Problem so repräsentiert, dass sich Variablen, Wertebereiche und Constraints bei Bedarf als SAT-Klauseln erklären lassen.
 Anstelle einer vollständigen Vortransformation werden mithilfe von \emph{Lazy Clause Generation} (LCG) nur dann Klauseln erzeugt, wenn sie zur Begründung von Propagation oder zur Analyse von Konflikten benötigt werden \cite{Stuckey2010}.
 Globale Constraints bleiben als spezialisierte Propagatoren erhalten und interagieren mit dem SAT-Solver, indem sie bei Bedarf Klauseln erzeugen, die die jeweilige Inferenz oder den Konflikt erklären und damit zukünftige Konflikte ausschließen \cite{cp-sat-primer}.
-
-
-
 \subsection{Suchverfahren und Propagation}
 \label{sec:search_prop}
 CLP(FD) in SWI-Prolog verwendet ein klassisches, sequentielles Suchverfahren.
-Dabei werden Variablen in einer vom Anwender wählbaren oder durch Heuristiken bestimmten Reihenfolge belegt (\emph{Labeling}).
+Dabei werden Variablen in einer vom Anwender wählbaren oder durch Heuristiken bestimmten Reihenfolge belegt (Labeling).
 Jede Belegung wird unmittelbar durch Constraint-Propagation überprüft.
 Als Konsistenzniveau wird dabei \emph{Domain Consistency} angestrebt, es wird also für jede Variable sichergestellt, dass jeder verbleibende Wert mit allen Constraints vereinbar ist.
 Tritt eine Inkonsistenz auf, greift der Solver auf Backtracking zurück, um alternative Belegungen zu prüfen.
@@ -240,13 +237,57 @@ Während CLP(FD) inkrementell arbeitet und jede Entscheidung unmittelbar propagi
 Die Propagation orientiert sich dabei an \emph{Bound Consistency} und SAT-Klauselpropagation, wodurch sich in vielen Fällen eine schnellere Eingrenzung des Suchraums ergibt.
 \subsection{Monotonie}
 \label{sec:monotonie}
-
 In SWI-Prolog CLP(FD) kann Monotonie über die Prolog-Flag \texttt{clpfd\_monotonic} aktiviert werden.  
 In diesem Modus ist der Operator \texttt{?/1} verpflichtend, um Variablen explizit als ganze Zahlen zu kennzeichnen.
 Zusammengesetzte arithmetische Terme (z.\,B. \texttt{(1+1)}) werden abgelehnt.
 Auch ist \texttt{X \#=3 } dann nicht mehr zulässig, weil zu wenig über die Variable \texttt{X} bekannt ist.   
 Dadurch können durch unterschiedliche Auswertungsreihenfolgen keine neuen Lösungen entstehen \cite{swi-clpfd-doc}.
+
+CP-SAT verfügt zwar über keine direkte Ansteuerung des Monotonieverhaltens, aufgrund der Funktionsweise von CDCL und Lazy Clause Generation ergibt sich jedoch implizit Monotonie, da einmal abgeleitete Klauseln dauerhaft im Suchraum bestehen bleiben.
 \subsection{Benchmark}
+\subsubsection{Rahmenbedingungen}
+Die Benchmarks wurden mittels eines Ryzen 7 5700X Prozessors (8 Kerne; 16 Threads; Basistakt 3,80GHz) durchgeführt.
+Es standen 32GB DDR4-3666Hz RAM zur Verfügung.
+Das zugrunde liegende Betriebssystem war Windows~11 Pro x64 (Version 23H2) unter der Energieoption \glqq Höchstleistung\grqq.
+Verwendet wurde Python~3.11, OR-Tools~9.12.4544 und SWI-Prolog~9.2.9.
+\noindent
+Die Benchmarks erfolgten in drei Varianten, wobei CLP(FD) stets mit First-Fail arbeitete:
+\begin{itemize}
+    \item \emph{Variante 1}: CP-SAT mit ff und single-threaded,
+    \item \emph{Variante 2}: CP-SAT ohne vorgegebene Strategie und single-threaded,
+    \item \emph{Variante 3}: CP-SAT ohne vorgegebene Strategie und multi-threaded.
+\end{itemize}
+
+Da First-Fail bei CP-SAT nicht existiert, wurde die Strategie explizit nachgebildet.
+Dafür wurde \verb|model.AddDecisionStrategy| verwendet.
+Lediglich der Parameter \texttt{seed} wurde konstant gehalten, um die Reproduzierbarkeit der Ergebnisse zu gewährleisten.
+
+Gemessen wurde die tatsächlich belegte CPU-Zeit.
+Schedulingeffekte oder I/O sind also nicht in die Messung eingeflossen.
+Das 7-11-Problem wurde 100-mal wiederholt, das N-Queens-Problem für jedes $N \in \{25,26,\dots,50\}$.
+Vor Beginn der Messungen wurden zusätzlich 5 Warmup-Läufe durchgeführt.
+Für das N-Queens-Problem wurde für jedes $N$ das arithmetische Mittel über alle Durchläufe gebildet.
+\subsubsection{Das N-Queens Problem}
+Das N-Queens-Problem wurde zum ersten Mal 1848 von M. Bezzel in der Berliner Schachzeitung beschrieben.
+Ursprünglich mit genau acht Damen beschrieben, wird es gegenwärtig auf $N$ Damen, die auf einem $N \times N$ großen Schachbrett platziert werden, generalisiert.
+Die Herausforderung des Problems besteht darin, dass die Damen sich nicht gegenseitig schlagen dürfen \cite{nqueens}.
+
+Aufgrund seiner einfachen Modellierung und exponentiellem Wachstum der Lösungsmenge in Abhängigkeit von $N$ eignet sich das N-Queens-Problem als Beispielproblem für diesen Benchmark.
+Das N-Queens-Problem wird auch in \cite{ortools} für CP-SAT oder in \cite{drt} für CLP(FD) beispielhaft aufgeführt. 
+
+Der Fokus des N-Queens-Problems liegt bei diesem Benchmark auf der Skalierbarkeit mit wachsendem $N$.
+\subsubsection{Das 7-11-Problem}
+Das 7-11-Problem wurde ursprünglich in \cite{seven_eleven} von Paul Pritchard und David Gries beschrieben.
+Es geht darum, vier Artikelpreise aus dem Sortiment eines Lebensmittelgeschäfts zu bestimmen, deren Summe 711 Cent beträgt.
+Zusätzlich muss das Produkt der Artikel $711 * 100^3$ ergeben.
+Ein 4-Tupel, das beide Bedingungen erfüllt, stellt eine Lösung dar. 
+
+Das 7-11-Problem eignet sich als Benchmark, weil es trotz seiner geringen Variablenanzahl eine interessante Kombination von Constraints aufweist.
+Einerseits ist die Modellierung mit nur vier Variablen vergleichsweise einfach, andererseits erzwingt die gleichzeitige Erfüllung von Summen- und Produktbedingungen eine starke Einschränkung des Suchraums.
+Damit stellt das Problem hohe Anforderungen an die Constraint-Propagation.
+
+7-11 wird in dieser Arbeit daher eingesetzt, um den Umgang der Solver mit komplexen arithmetischen Abhängigkeiten zu untersuchen.
+\subsubsection{Ergebnisse und Interpretation}
 \label{sec:performance}
 \section{Zusammenfassung}
 \section{Literaturverzeichnis}
