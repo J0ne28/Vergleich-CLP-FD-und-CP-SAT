@@ -20,6 +20,8 @@
 \usepackage{amsfonts}
 \usepackage{fancyvrb}
 \usepackage{csquotes}
+\usepackage{booktabs}
+\usepackage{float}
 
 
 % Seitenzahlen
@@ -74,7 +76,7 @@ Wie bereits in Abschnitt \ref{sec:einleitung} beschrieben, verfolgt die Constrai
 Dabei wird ein Problem modelliert, indem folgende, elementare Bestandteile beschrieben werden: die Variablen, deren Wertebereiche sowohl vordefinierte als auch benutzerdefinierte Constraints, die die Variablen zueinander in Beziehung setzen und den Lösungsraum einschränken.
 
 Ein modelliertes Problem wird anschließend durch einen Constraint-Solver gelöst.
-Dabei handelt es sich um eine spezielle Softwarekomponente, die die Erfüllbarkeit eines Constraint-Problems prüft und konkrete Lösungen für eben dieses berechnen kann \cite{drt,clp_book2}.
+Dabei handelt es sich um eine spezielle Softwarekomponente, die die Erfüllbarkeit eines Constraint-Problems prüft und konkrete Lösungen für eben dieses berechnet, sofern Lösungen existieren \cite{drt,clp_book2}.
 
 \noindent
 Das Vorgehen eines klassischen Constraint-Solvers besteht aus drei grundlegenden Schritten:
@@ -188,7 +190,7 @@ Zur Demonstration folgt dasselbe Modell wie in Abschnitt \ref{sec:clpfd}:
 Die grundlegende Architektur des Solvers ist ein hybrider Portfolio-Ansatz, das heißt es werden mehrere unterschiedliche Heuristiken sowie Suchverfahren parallel mittels mehrerer Threads ausgeführt \cite{perron}.
 Dazu gehören klassische Constraint-Propagation, Techniken aus dem SAT-Solving und Methoden der linearen Optimierung \cite{cp-sat-primer}.
 Während der Laufzeit tauschen die Threads (In OR-Tools-Terminologie \glqq workers\grqq{}) kontinuierlich gewonnene Informationen -- dazu gehören beispielsweise bessere engere Wertebereichsgrenzen oder gefundene Teillösungen -- aus.
-Heuristiken sind dabei zum Beispiel das regelmäßige Neustarten der Suche oder Abbruch nach einer gewissen Anzahl an Konflikten.
+Heuristiken sind dabei zum Beispiel das regelmäßige Neustarten der Suche, der Abbruch nach einer gewissen Anzahl an Konflikten oder zeitliche Begrenzungen.
 
 \subsection{Verwandte Arbeiten}
 Marten \cite{marten2018} vergleicht drei verschiedene Arten von Constraint-Solvern – CSP-, SAT- und BDD-basierte Ansätze – anhand künstlich erzeugter Modelle.
@@ -211,60 +213,79 @@ In CLP(FD) werden Variablen als \emph{attributed variables} repräsentiert.
 Diese enthalten den aktuellen Wertebereich, der intern als Intervallbaum gespeichert wird. 
 Damit lassen sich Schnitt-, Such- und Vereinigungsoperationen auf Wertebereichen effizienter durchführen. 
 Zusätzlich enthält eine attributed variable die zugehörigen Propagatoren, die bei Änderungen des Wertebereichs aktiviert werden. 
-Falls die Domäne unendlich ist, wird außerdem markiert, ob eine Schranke oder die Spanne des Bereichs verändert wurde.
+Falls der Wertebereich unendlich ist wird außerdem markiert, ob eine Schranke oder die Spanne des Bereichs verändert wurde.
 CLP(FD) behält dabei die ursprünglichen Wertebereiche bei: Die Modellierungsebene und die interne Repräsentation stimmen also weitgehend überein \cite{drt}.
+Die Wertebereiche der Variablen werden schon vor der eigentlichen Lösungssuche so weit wie möglich eingeschränkt.
 
 CP-SAT hingegen kombiniert Constraint-Programmierung mit Techniken des SAT-Solvings.
 Dabei wird das Problem so repräsentiert, dass sich Variablen, Wertebereiche und Constraints bei Bedarf als SAT-Klauseln erklären lassen.
 Anstelle einer vollständigen Vortransformation werden mithilfe von \emph{Lazy Clause Generation} (LCG) nur dann Klauseln erzeugt, wenn sie zur Begründung von Propagation oder zur Analyse von Konflikten benötigt werden \cite{Stuckey2010}.
 Globale Constraints bleiben als spezialisierte Propagatoren erhalten und interagieren mit dem SAT-Solver, indem sie bei Bedarf Klauseln erzeugen, die die jeweilige Inferenz oder den Konflikt erklären und damit zukünftige Konflikte ausschließen \cite{cp-sat-primer}.
+
+Zudem ist CP-SAT nicht nur auf ganzzahlige Techniken beschränkt, denn der Solver verwendet unter anderem auch Linear Relaxation.
+Das bedeutet, die Bedingung der Ganzzahligkeit wird temporär gelockert, um eventuelle bessere Grenzen schneller zu finden \cite{cp-sat-primer}.
+
+Bei CP-SAT wird das Modell vor der Lösungssuche so weit wie möglich vereinfacht und eingeschränkt.
+Dafür werden beispielsweise Variablenbelegungen vorher erprobt, um weitere Einschränkungen zu finden.
+Gefundene Lösungen werden schließlich wieder zurücktransformiert.
 \subsection{Suchverfahren und Propagation}
 \label{sec:search_prop}
-CLP(FD) in SWI-Prolog verwendet ein klassisches, sequentielles Suchverfahren.
-Dabei werden Variablen in einer vom Anwender wählbaren oder durch Heuristiken bestimmten Reihenfolge belegt (Labeling).
+CLP(FD) in SWI-Prolog verwendet ein eher \glqq klassisches\grqq{} Suchverfahren, bestehend aus Labeling, Propagation und Backtracking.
+Variablen werden in einer vom Anwender wählbaren oder durch Heuristiken bestimmten Reihenfolge belegt (Labeling).
 Jede Belegung wird unmittelbar durch Constraint-Propagation überprüft.
-Als Konsistenzniveau wird dabei \emph{Domain Consistency} angestrebt, es wird also für jede Variable sichergestellt, dass jeder verbleibende Wert mit allen Constraints vereinbar ist.
+Als Konsistenzniveau wird dabei Domain Consistency angestrebt, es wird also für jede Variable sichergestellt, dass jeder verbleibende Wert mit allen Constraints vereinbar ist.
 Tritt eine Inkonsistenz auf, greift der Solver auf Backtracking zurück, um alternative Belegungen zu prüfen.
 Die Suche erfolgt grundsätzlich in einem einzelnen Thread.
 
-Der CP-SAT-Solver aus Google OR-Tools verfolgt hingegen einen hybriden Portfolio-Ansatz.
+Der CP-SAT-Solver verfolgt hingegen einen hybriden Portfolio-Ansatz.
 Mehrere Suchstrategien und Heuristiken werden parallel in separaten Threads (workers) ausgeführt \cite{perron}.
 Neben klassischer Constraint-Propagation kommen Techniken aus dem SAT-Solving zum Einsatz, darunter Konfliktanalyse mit \emph{Conflict-Driven Clause Learning} (CDCL) und Lazy Clause Generation.
 Diese Verfahren ermöglichen es, aus Konflikten während der Suche neue Klauseln abzuleiten, die den Suchraum dauerhaft einschränken.
 Informationen wie engere Wertebereichsgrenzen oder Teillösungen werden zwischen den Threads kontinuierlich ausgetauscht, wodurch unterschiedliche Suchstränge voneinander profitieren können. 
 
-Während CLP(FD) inkrementell arbeitet und jede Entscheidung unmittelbar propagiert, formuliert CP-SAT das Modell in eine erweiterte SAT-Form um und kombiniert diese mit Ganzzahlarithmetik.
-Die Propagation orientiert sich dabei an \emph{Bound Consistency} und SAT-Klauselpropagation, wodurch sich in vielen Fällen eine schnellere Eingrenzung des Suchraums ergibt.
+Während CLP(FD) inkrementell arbeitet und jede Entscheidung unmittelbar propagiert, formuliert CP-SAT das Modell kontinuierlich in eine SAT-Form um und lernt aus Konflikten.
+%Die Propagation orientiert sich dabei an Bound Consistency und SAT-Klauselpropagation, wodurch sich in vielen Fällen eine schnellere Eingrenzung des Suchraums ergibt.
 \subsection{Monotonie}
 \label{sec:monotonie}
 In SWI-Prolog CLP(FD) kann Monotonie über die Prolog-Flag \texttt{clpfd\_monotonic} aktiviert werden.  
 In diesem Modus ist der Operator \texttt{?/1} verpflichtend, um Variablen explizit als ganze Zahlen zu kennzeichnen.
 Zusammengesetzte arithmetische Terme (z.\,B. \texttt{(1+1)}) werden abgelehnt.
-Auch ist \texttt{X \#=3 } dann nicht mehr zulässig, weil zu wenig über die Variable \texttt{X} bekannt ist.   
+Auch ist \texttt{X \#=3} dann nicht mehr zulässig, weil zu wenig über die Variable \texttt{X} bekannt ist.   
 Dadurch können durch unterschiedliche Auswertungsreihenfolgen keine neuen Lösungen entstehen \cite{swi-clpfd-doc}.
 
-CP-SAT verfügt zwar über keine direkte Ansteuerung des Monotonieverhaltens, aufgrund der Funktionsweise von CDCL und Lazy Clause Generation ergibt sich jedoch implizit Monotonie, da einmal abgeleitete Klauseln dauerhaft im Suchraum bestehen bleiben.
+CP-SAT verfügt über keine direkte Ansteuerung des Monotonieverhaltens, aufgrund der Funktionsweise von CDCL und Lazy Clause Generation ergibt sich jedoch implizit Monotonie, da einmal abgeleitete Klauseln dauerhaft im Suchraum bestehen bleiben.
+Monotonie wird nicht explizit bei CP-SAT genannt.
 \subsection{Benchmark}
+Alle Benchmarkergebnisse, weiterführende Diagramme, eine kompakte Dokumentation sowie jeglicher Quellcode sind auch auf GitHub zu finden.\footnote{Siehe \url{https://github.com/J0ne28/Vergleich-CLP-FD-und-CP-SAT}.}
+Zusammengefasste Ergebnisse sind in \autoref{tab:benchmark-nqueens} und \autoref{tab:benchmark-711} angegeben, die modellierten Probleme sind unter x und y zu finden.
+\label{sec:performance}
 \subsubsection{Rahmenbedingungen}
 Die Benchmarks wurden mittels eines Ryzen 7 5700X Prozessors (8 Kerne; 16 Threads; Basistakt 3,80GHz) durchgeführt.
 Es standen 32GB DDR4-3666Hz RAM zur Verfügung.
 Das zugrunde liegende Betriebssystem war Windows~11 Pro x64 (Version 23H2) unter der Energieoption \glqq Höchstleistung\grqq.
 Verwendet wurde Python~3.11, OR-Tools~9.12.4544 und SWI-Prolog~9.2.9.
+
+Die Benchmarks erfolgten in drei Varianten, wobei CLP(FD) stets mit First-Fail und ohne weitere Konfiguration arbeitete. 
+Erste Versuche mit alternativen Auswahlstrategien führten bei wachsender Problemgröße zu langen Laufzeiten, die den Zeitrahmen des Benchmarks überschritten hätten.
+Um reproduzierbare Ergebnisse in vertretbarer Zeit zu gewährleisten, wurde daher First-Fail als Auswahlstrategie festgelegt.
+
 \noindent
-Die Benchmarks erfolgten in drei Varianten, wobei CLP(FD) stets mit First-Fail arbeitete:
+Die folgenden Varianten wurden getestet:
 \begin{itemize}
-    \item \emph{Variante 1}: CP-SAT mit ff und single-threaded,
+    \item \emph{Variante 1}: CP-SAT mit FF und single-threaded,
     \item \emph{Variante 2}: CP-SAT ohne vorgegebene Strategie und single-threaded,
     \item \emph{Variante 3}: CP-SAT ohne vorgegebene Strategie und multi-threaded.
 \end{itemize}
-
+\noindent
 Da First-Fail bei CP-SAT nicht existiert, wurde die Strategie explizit nachgebildet.
 Dafür wurde \verb|model.AddDecisionStrategy| verwendet.
-Lediglich der Parameter \texttt{seed} wurde konstant gehalten, um die Reproduzierbarkeit der Ergebnisse zu gewährleisten.
+Der Parameter \texttt{Seed} wurde konstant gehalten, um die Reproduzierbarkeit der Ergebnisse zu gewährleisten.
+Ohne die Festlegung eines Seeds würde CP-SAT bei jedem neuen Anlauf zum Beispiel andere Heuristik-Parameter verwenden.
 
 Gemessen wurde die tatsächlich belegte CPU-Zeit.
 Schedulingeffekte oder I/O sind also nicht in die Messung eingeflossen.
-Das 7-11-Problem wurde 100-mal wiederholt, das N-Queens-Problem für jedes $N \in \{25,26,\dots,50\}$.
+Die kleinste Messeinheit beträgt $\frac{1}{64}$s.
+Das 7-11-Problem wurde 100-mal wiederholt, das N-Queens-Problem jeweils für jedes $N \in \{25,26,\dots,50\}$ 100-mal.
 Vor Beginn der Messungen wurden zusätzlich 5 Warmup-Läufe durchgeführt.
 Für das N-Queens-Problem wurde für jedes $N$ das arithmetische Mittel über alle Durchläufe gebildet.
 \subsubsection{Das N-Queens Problem}
@@ -273,9 +294,35 @@ Ursprünglich mit genau acht Damen beschrieben, wird es gegenwärtig auf $N$ Dam
 Die Herausforderung des Problems besteht darin, dass die Damen sich nicht gegenseitig schlagen dürfen \cite{nqueens}.
 
 Aufgrund seiner einfachen Modellierung und exponentiellem Wachstum der Lösungsmenge in Abhängigkeit von $N$ eignet sich das N-Queens-Problem als Beispielproblem für diesen Benchmark.
-Das N-Queens-Problem wird auch in \cite{ortools} für CP-SAT oder in \cite{drt} für CLP(FD) beispielhaft aufgeführt. 
+Das N-Queens-Problem wird in \cite{ortools} für CP-SAT oder in \cite{drt} für CLP(FD) beispielhaft aufgeführt. 
 
 Der Fokus des N-Queens-Problems liegt bei diesem Benchmark auf der Skalierbarkeit mit wachsendem $N$.
+\subsubsection{Ergebnisse und Interpretation für N-Queens}
+
+In \autoref{tab:benchmark-nqueens} sind die Messergebnisse mittels Mittelwert und Standardabweichung für jedes N und jede Variante dargestellt.
+\paragraph{Variante 1.}
+In dieser Konfiguration zeigt sich, dass sowohl CLP(FD) als auch CP-SAT Laufzeitschwankungen aufweisen können. 
+CLP(FD) produziert markante Peaks bei $N=30$ und $N=49$, die auf die statische First-Fail-Heuristik zurückzuführen sind: 
+trifft diese eine ungünstige Variablenwahl, so muss ein größerer Teil des Suchraums expandiert werden, als bei einer \glqq guten\grqq{} Variablenwahl. 
+Auch CP-SAT ist in dieser Variante nicht völlig robust gegenüber diesem Effekt und zeigt bei $N=32$ einen signifikanten Laufzeitpeak. 
+Abgesehen davon bleibt CP-SAT aber insgesamt auf einem schnelleren Niveau und arbeitet stabiler als CLP(FD).
+\paragraph{Variante 2.}
+Ohne die explizite Vorgabe einer Heuristik erzielt CP-SAT die besten Ergebnisse im Single-Thread-Betrieb. 
+Die Laufzeiten steigen mit wachsendem $N$ zwar erwartungsgemäß an, Peaks wie in Variante~1 sind jedoch geglättet. 
+Es zeigt sich, dass die dynamische Funktionsweise von CP-SAT besser skaliert als das eher statische Vorgehen von CLP(FD).
+CLP(FD) ist hier im Mittel langsamer und erreicht weniger stabile Laufzeiten.
+\paragraph{Variante 3.}
+In der multithreaded Ausführung verstärkt sich der Vorteil von CP-SAT nochmals. 
+Durch parallele Suchstränge und den Austausch von Informationen zwischen den Threads (z.\,B. bessere Schranken oder gefundene Teillösungen) werden ungünstige Heuristikentscheidungen wirksam kompensiert. 
+Die Laufzeiten verlaufen sehr gleichmäßig, Peaks wie bei CLP(FD) treten praktisch nicht auf. 
+CLP(FD) bleibt dagegen auch hier anfällig für starke Schwankungen und verliert deutlich an Effizienz bei einzelnen Problemgrößen. 
+\\
+
+\noindent
+Über alle Varianten hinweg zeigt sich, dass CP-SAT im N-Queens-Benchmark die robusteren und durchgängig schnelleren Ergebnisse liefert. 
+CLP(FD) kann in einzelnen Fällen erheblich langsamer sein, da die Suche stark von der gewählten Heuristik abhängt. 
+CP-SAT profitiert besonders von seinen eingebauten Restart-Mechanismen und vom Multithreading, wodurch die Lösungssuche stabilisiert und die Laufzeit im Vergleich zu CLP(FD) signifikant reduziert wird.
+
 \subsubsection{Das 7-11-Problem}
 Das 7-11-Problem wurde ursprünglich in \cite{seven_eleven} von Paul Pritchard und David Gries beschrieben.
 Es geht darum, vier Artikelpreise aus dem Sortiment eines Lebensmittelgeschäfts zu bestimmen, deren Summe 711 Cent beträgt.
@@ -287,9 +334,88 @@ Einerseits ist die Modellierung mit nur vier Variablen vergleichsweise einfach, 
 Damit stellt das Problem hohe Anforderungen an die Constraint-Propagation.
 
 7-11 wird in dieser Arbeit daher eingesetzt, um den Umgang der Solver mit komplexen arithmetischen Abhängigkeiten zu untersuchen.
-\subsubsection{Ergebnisse und Interpretation}
-\label{sec:performance}
-\section{Zusammenfassung}
+\subsubsection{Ergebnisse und Interpretation für 7-11}
+In \autoref{tab:benchmark-711} sind die Messergebnisse mittels Mittelwert und Standardabweichung je Variante angegeben.
+\paragraph{Variante 1.}
+Mit erzwungener First-Fail-Heuristik liefert CP-SAT im 7-11-Benchmark die durchgängig besten Ergebnisse.
+Die Laufzeiten liegen konstant im Bereich weniger Millisekunden ($\bar{x}$~0,016 s) und sind damit schneller als CLP(FD) ($\bar{x}$~0,206 s).
+Die feste Variablenwahlstrategie harmoniert offenbar bei diesem stark eingeschränkten Problem sehr gut mit der Konfliktanalyse des Solvers, sodass Lösungen ohne praktisch signifikanten Suchaufwand gefunden werden konnten.
+
+\paragraph{Variante 2.}
+Ohne explizite Vorgabe einer Heuristik ist CP-SAT hier deutlich langsamer als in Variante 1.
+Mit $\bar{x}$~0,698 s liegt die Laufzeit über der von CLP(FD) und schwankt zwischen 0,42 und 0,92 s.
+Bei einem kleinen, stark arithmetisch eingeschränkten Modell wie 7-11 und der limitierten Thread-Anzahl greifen die internen Restart- und Portfolio-Heuristiken weniger effizient, sodass vergleichsweise viel Suchraum exploriert wird.
+
+\paragraph{Variante 3.}
+Die multithreaded-Ausführung reduziert die mittlere Laufzeit ($\bar{x}$~0,255 s) im Vergleich zu Variante 2, bleibt aber weiterhin über CLP(FD).
+Während einzelne Läufe sehr schnell abgeschlossen werden, treten auch sporadische Ausreißer oberhalb von 0,4 s auf.
+Der Portfolio-Ansatz gleicht ungünstige Entscheidungen teilweise aus, bringt bei so kleinen Instanzen jedoch keinen durchgängig stabilen Vorteil.
+\\
+
+\noindent
+Beim 7-11-Problem hängt die Performance von CP-SAT stark von der Konfiguration ab: Mit First-Fail (Variante 1) ist der Solver überlegen und schlägt CLP(FD).
+Ohne Strategie (Variante 2) ist er dagegen langsamer als CLP(FD), die Multithread-Variante (Variante 3) verbessert die Laufzeit etwas.
+CLP(FD) liefert stabile Resultate, erreicht aber nicht die Leistung eines, wie in Variante 1, optimal konfigurierten CP-SAT.
+\section{Einordnung und Fazit}
+Bababa
+\section{Anhang}
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{rcccc}
+\toprule
+$N$ & CLP(FD) & Variante 1 & Variante 2 & Variante 3 \\
+ & $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ \\
+\midrule
+25 & 0.069 $\pm$ 0.014 & 0.030 $\pm$ 0.013 & 0.028 $\pm$ 0.010 & 0.020 $\pm$ 0.023 \\
+26 & 0.072 $\pm$ 0.014 & 0.034 $\pm$ 0.014 & 0.029 $\pm$ 0.008 & 0.018 $\pm$ 0.008 \\
+27 & 0.055 $\pm$ 0.013 & 0.035 $\pm$ 0.016 & 0.030 $\pm$ 0.010 & 0.021 $\pm$ 0.010 \\
+28 & 0.080 $\pm$ 0.016 & 0.039 $\pm$ 0.016 & 0.033 $\pm$ 0.010 & 0.030 $\pm$ 0.009 \\
+29 & 0.090 $\pm$ 0.018 & 0.043 $\pm$ 0.014 & 0.036 $\pm$ 0.011 & 0.029 $\pm$ 0.018 \\
+30 & 0.352 $\pm$ 0.052 & 0.050 $\pm$ 0.018 & 0.031 $\pm$ 0.013 & 0.031 $\pm$ 0.012 \\
+31 & 0.102 $\pm$ 0.021 & 0.053 $\pm$ 0.019 & 0.044 $\pm$ 0.011 & 0.033 $\pm$ 0.022 \\
+32 & 0.095 $\pm$ 0.020 & 0.380 $\pm$ 0.067 & 0.044 $\pm$ 0.012 & 0.043 $\pm$ 0.027 \\
+33 & 0.098 $\pm$ 0.014 & 0.058 $\pm$ 0.019 & 0.047 $\pm$ 0.012 & 0.038 $\pm$ 0.010 \\
+34 & 0.091 $\pm$ 0.017 & 0.067 $\pm$ 0.022 & 0.053 $\pm$ 0.015 & 0.046 $\pm$ 0.016 \\
+35 & 0.099 $\pm$ 0.015 & 0.075 $\pm$ 0.017 & 0.053 $\pm$ 0.012 & 0.045 $\pm$ 0.011 \\
+36 & 0.147 $\pm$ 0.019 & 0.068 $\pm$ 0.022 & 0.058 $\pm$ 0.015 & 0.045 $\pm$ 0.013 \\
+37 & 0.177 $\pm$ 0.030 & 0.103 $\pm$ 0.019 & 0.060 $\pm$ 0.014 & 0.051 $\pm$ 0.018 \\
+38 & 0.150 $\pm$ 0.025 & 0.113 $\pm$ 0.018 & 0.067 $\pm$ 0.012 & 0.055 $\pm$ 0.015 \\
+39 & 0.191 $\pm$ 0.024 & 0.120 $\pm$ 0.020 & 0.072 $\pm$ 0.013 & 0.061 $\pm$ 0.015 \\
+40 & 0.154 $\pm$ 0.017 & 0.129 $\pm$ 0.018 & 0.068 $\pm$ 0.016 & 0.061 $\pm$ 0.012 \\
+41 & 0.125 $\pm$ 0.033 & 0.135 $\pm$ 0.020 & 0.076 $\pm$ 0.017 & 0.058 $\pm$ 0.019 \\
+42 & 0.154 $\pm$ 0.039 & 0.144 $\pm$ 0.021 & 0.071 $\pm$ 0.021 & 0.064 $\pm$ 0.022 \\
+43 & 0.149 $\pm$ 0.038 & 0.151 $\pm$ 0.022 & 0.087 $\pm$ 0.017 & 0.068 $\pm$ 0.023 \\
+44 & 0.162 $\pm$ 0.040 & 0.160 $\pm$ 0.022 & 0.083 $\pm$ 0.021 & 0.074 $\pm$ 0.024 \\
+45 & 0.174 $\pm$ 0.045 & 0.177 $\pm$ 0.029 & 0.089 $\pm$ 0.022 & 0.074 $\pm$ 0.021 \\
+46 & 0.172 $\pm$ 0.046 & 0.173 $\pm$ 0.026 & 0.098 $\pm$ 0.023 & 0.083 $\pm$ 0.020 \\
+47 & 0.196 $\pm$ 0.042 & 0.182 $\pm$ 0.028 & 0.095 $\pm$ 0.024 & 0.083 $\pm$ 0.030 \\
+48 & 0.196 $\pm$ 0.044 & 0.196 $\pm$ 0.024 & 0.103 $\pm$ 0.022 & 0.084 $\pm$ 0.026 \\
+49 & 0.504 $\pm$ 0.090 & 0.208 $\pm$ 0.025 & 0.114 $\pm$ 0.017 & 0.085 $\pm$ 0.027 \\
+50 & 0.244 $\pm$ 0.055 & 0.169 $\pm$ 0.038 & 0.111 $\pm$ 0.027 & 0.088 $\pm$ 0.026 \\
+\bottomrule
+\end{tabular}
+\caption{Laufzeiten pro $N$ (Mittelwert $\bar{x}$ und Standardabweichung $\sigma$) für CLP(FD) und CP-SAT-Varianten.}
+\label{tab:benchmark-nqueens}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{cccc}
+\toprule
+CLP(FD) & Variante 1 & Variante 2 & Variante 3 \\
+$\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ \\
+\midrule
+0.206 $\pm$ 0.049 & 0.698 $\pm$ 0.111 & 0.016 $\pm$ 0.011 & 0.255 $\pm$ 0.071 \\
+\bottomrule
+\end{tabular}
+\caption{Laufzeiten für das 7-11-Problem (Mittelwert $\bar{x}$ und Standardabweichung $\sigma$) für CLP(FD) und CP-SAT-Varianten.}
+\label{tab:benchmark-711}
+\end{table}
+
 \section{Literaturverzeichnis}
 \renewcommand*{\bibname}{} % für Bücher (report, book, etc.)
 \renewcommand*{\refname}{} % für Artikel (article-Klasse)
