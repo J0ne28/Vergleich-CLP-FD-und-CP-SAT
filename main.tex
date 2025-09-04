@@ -22,18 +22,22 @@
 \usepackage{csquotes}
 \usepackage{booktabs}
 \usepackage{float}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage{siunitx}
+\sisetup{
+  output-decimal-marker = {,}, % Dezimalkomma ohne Locale
+  separate-uncertainty = true  % 1,23 ± 0,04 statt 1,23(4)
+}
 
-
-% Seitenzahlen
 \pagestyle{plain}
 
-% Literatur
-% \usepackage[backend=biber,style=alphabetic,heading=none]{biblatex}
 \usepackage[backend=biber,style=alphabetic,language=ngerman, sorting=nyt]{biblatex}
-% \usepackage[backend=biber,style=alphabetic]{biblatex}
+\renewcommand{\lstlistingname}{Programmcode}
+
 \addbibresource{literatur.bib}
 
-% Titelinformationen
 \title{Vergleich von CLP(FD) in SWI-Prolog und dem CP-SAT-Solver von Google OR-Tools}
 \author{Jonas Lorenz\\Matrikelnummer: 741255\\Studiengang: Bachelor Informatik}
 \date{\today}
@@ -63,7 +67,7 @@ Obwohl OR-Tools eine Vielzahl weiterer -- sowohl kommerzieller als auch Open-Sou
 CP-SAT gilt als leistungsstärkster Bestandteil der OR-Tools-Bibliothek und erzielte unter anderem bei der MiniZinc Challenge 2024 \cite{minizinc2024,perron} in allen Kategorien den ersten Platz.
 
 Ziel der Arbeit ist es, die beiden genannten Constraint-Systeme kompakt zu präsentieren und sie hinsichtlich ihrer Such- und Propagationsverfahren, der internen Modellverarbeitung, ihres Monotonie-Verhaltens zu vergleichen.
-Desweiteren erfolgt ebenfalls ein praktischer Vergleich der Constraint-Solver mittels eines Benchmarks unter Verwendung des N-Queens-Problems \cite{nqueens} und dem Seven-Eleven-Problems \cite{seven_eleven}. 
+Des Weiteren erfolgt ein praktischer Vergleich der Constraint-Solver mittels eines Benchmarks unter Verwendung des N-Queens-Problems \cite{nqueens} und dem Seven-Eleven-Problems \cite{seven_eleven}. 
 
 \section{Grundlagen und verwandte Arbeiten}
 \subsection{Constraints und Constraint-Programmierung}
@@ -73,7 +77,7 @@ Constraints eignen sich allgemein gut, um unvollständige Informationen darzuste
 Sie ermöglichen es, die Eigenschaften und Beziehungen von Objekten zu beschreiben, auch wenn diese nur teilweise bekannt sind \cite{clp_book}.
 
 Wie bereits in Abschnitt \ref{sec:einleitung} beschrieben, verfolgt die Constraint-Programmierung einen deklarativen Ansatz.
-Dabei wird ein Problem modelliert, indem folgende, elementare Bestandteile beschrieben werden: die Variablen, deren Wertebereiche sowohl vordefinierte als auch benutzerdefinierte Constraints, die die Variablen zueinander in Beziehung setzen und den Lösungsraum einschränken.
+Dabei wird ein Problem modelliert, indem folgende, elementare Bestandteile beschrieben werden: die Variablen, deren Wertebereiche sowie sowohl vordefinierte als auch benutzerdefinierte Constraints, die die Variablen zueinander in Beziehung setzen und den Lösungsraum einschränken.
 
 Ein modelliertes Problem wird anschließend durch einen Constraint-Solver gelöst.
 Dabei handelt es sich um eine spezielle Softwarekomponente, die die Erfüllbarkeit eines Constraint-Problems prüft und konkrete Lösungen für eben dieses berechnet, sofern Lösungen existieren \cite{drt,clp_book2}.
@@ -85,7 +89,7 @@ Das Vorgehen eines klassischen Constraint-Solvers besteht aus drei grundlegenden
     \item Propagation der Konsequenzen dieser Festlegung auf die übrigen Variablen,
     \item Fortsetzen mit der nächsten Variable oder -- bei Inkonsistenz -- Rücksprung zu einer vorherigen Entscheidung (Backtracking siehe \ref{sec:backtracking}) und Wahl einer alternativen Belegung.
 \end{enumerate}
-Dieser Vorgang erfolgt so lang rekursiv, bis entweder eine gültige Lösung oder aber keine Lösung gefunden wurde \cite{clp_book2}.
+Dieser Vorgang erfolgt so lange rekursiv, bis entweder eine gültige Lösung oder aber keine Lösung gefunden wurde \cite{clp_book2}.
 \subsection{Zentrale Mechanismen und Eigenschaften}
 In diesem Abschnitt werden zentrale Mechanismen und Eigenschaften vorgestellt, welche von Constraint-Solvern angewandt werden, um beschriebene Probleme systematisch zu lösen. 
 Die konkrete Ausprägung von eben diesen ist abhängig vom jeweiligen Solver.
@@ -101,12 +105,12 @@ Dieser Vorgang wird wiederholt, bis ein stabiler Zustand (Fixpunkt) erreicht ist
 Getroffene Variablenbelegungen sowie die daraus resultierenden Propagationen lassen sich durch einen Entscheidungsbaum darstellen.
 Stellt der Solver während der Expansion des Baumes einen Konflikt mit anderen Constraints fest, dann wird im Entscheidungsbaum zum vorherigen Entscheidungsknoten zurückgesprungen und trifft -- wenn möglich -- eine andere Wahl.
 Dieser Prozess wird als Backtracking bezeichnet \cite{clp_handbook}. 
-Sollte keine weitere Alternative zur Verfügung stehen, dann wird das Prüfen auf Alternativen und eventuelles Zurücksetzen rekursiv fortgeführt, potentiell bis zur Wurzel.
+Sollte keine weitere Alternative zur Verfügung stehen, dann wird das Prüfen auf Alternativen und eventuelles Zurücksetzen rekursiv fortgeführt, potenziell bis zur Wurzel.
 Dort endet die Suche.
 
 Wird der Entscheidungsbaum während des Backtrackings vollständig expandiert, dann gibt es keine Lösung für das modellierte Problem \cite{clp_book2}.
 \subsubsection{Monotonie}
-Ein Constraint-System heißt monoton, wenn das Hinzufügen weiterer Constraints keine neuen Lösungen erzeugt \cite{drt}\cite{swi-clpfd-doc}.
+Ein Constraint-System heißt monoton, wenn das Hinzufügen weiterer Constraints keine neuen Lösungen erzeugt \cite{drt,swi-clpfd-doc}.
 In nicht-monotonen Systemen kann die Reihenfolge der Constraint-Angaben zu unterschiedlichen Ergebnissen führen, wie Triska \cite[S. 37]{drt} anhand zweier identischer, lediglich in der Reihenfolge variierender Anfragen zeigt.
 
 Für das Constraint-System selbst stellt nicht-monotones Verhalten kein Problem dar, es kann jedoch die Fehlersuche im Entwicklungsprozess erschweren.
@@ -158,8 +162,8 @@ Während die garantierte Terminierung eine Eigenschaft des Constraint-Solvers is
 
 \subsection{Google OR-Tools und der CP-SAT-Solver}
 \label{sec:ortools}
-Die Google-OR-Tools-Bibliothek, \glqq OR\grqq{} kurz für \emph{Operations Research}, ist in C++ implementiert und bietet offizielle Schnittstellen unter anderem für Python und Java.
-In dieser Arbeit wird sie ausschließlich über Python angesprochen.
+Die Google OR-Tools-Bibliothek, \glqq OR\grqq{} kurz für \emph{Operations Research}, ist in C++ implementiert und bietet offizielle Schnittstellen unter anderem für Python und Java.
+In dieser Arbeit wird sie ausschließlich über Python verwendet.
 Zur Verwendung muss die Bibliothek zunächst installiert werden (beispielsweise über den Python-Paketmanager \texttt{pip}).
 
 Constraint-Probleme können in OR-Tools allgemein über ganzzahlige Variablen mit endlichen Wertebereichen modelliert werden.
@@ -196,12 +200,12 @@ Heuristiken sind dabei zum Beispiel das regelmäßige Neustarten der Suche, der 
 Marten \cite{marten2018} vergleicht drei verschiedene Arten von Constraint-Solvern – CSP-, SAT- und BDD-basierte Ansätze – anhand künstlich erzeugter Modelle.
 Für die Tests werden die Modellparameter systematisch variiert, so zum Beispiel die Anzahl der Variablen, deren Struktur und die Anzahl zusätzlicher Nebenbedingungen.
 Die Ergebnisse werden anschließend mit realen Beispielen validiert.
-Die Arbeit zeigt, dass BDD-Ansätze bei der Zählung möglicher Konfigurationen oft am effizientesten sind, während CSP- und SAT-Solver je nach Modellstruktur ähnliche Leistungen erbringen.\\
-\\
+Die Arbeit zeigt, dass BDD-Ansätze bei der Zählung möglicher Konfigurationen oft am effizientesten sind, während CSP- und SAT-Solver je nach Modellstruktur ähnliche Leistungen erbringen.
+
 In Bauer \cite{bauer2019} werden sechs gängige Constraint-Solver im Rahmen der Variabilitätsanalyse von Feature-Modellen verglichen.
 Dafür werden künstliche und reale Modelle kombiniert, um sowohl die Rechenzeit als auch die Vielfalt (Repräsentativität) der gefundenen Lösungen zu bewerten.
-Aus den Ergebnissen leitet die Arbeit praxisorientierte Empfehlungen ab, welcher Solver – je nach Anwendungsschwerpunkt – am besten geeignet ist.\\
-\\
+Aus den Ergebnissen leitet die Arbeit praxisorientierte Empfehlungen ab, welcher Solver – je nach Anwendungsschwerpunkt – am besten geeignet ist.
+
 Triska \cite{drt} präsentiert neben den theoretischen Grundlagen und Eigenschaften von CLP(FD) auch Benchmark-Ergebnisse von Neng-Fa Zhou, dem Entwickler von B-Prolog, für verschiedene Prolog-Systeme.
 Das genaue Testdesign dieser Messungen wird nicht beschrieben.
 Die Resultate zeigen, dass CLP(FD) in Kombination mit SWI-Prolog im Vergleich eine geringere Ausführungsgeschwindigkeit aufweist und daher für viele industrielle Anwendungen weniger geeignet ist.
@@ -233,7 +237,6 @@ Gefundene Lösungen werden schließlich wieder zurücktransformiert.
 CLP(FD) in SWI-Prolog verwendet ein eher \glqq klassisches\grqq{} Suchverfahren, bestehend aus Labeling, Propagation und Backtracking.
 Variablen werden in einer vom Anwender wählbaren oder durch Heuristiken bestimmten Reihenfolge belegt (Labeling).
 Jede Belegung wird unmittelbar durch Constraint-Propagation überprüft.
-Als Konsistenzniveau wird dabei Domain Consistency angestrebt, es wird also für jede Variable sichergestellt, dass jeder verbleibende Wert mit allen Constraints vereinbar ist.
 Tritt eine Inkonsistenz auf, greift der Solver auf Backtracking zurück, um alternative Belegungen zu prüfen.
 Die Suche erfolgt grundsätzlich in einem einzelnen Thread.
 
@@ -244,7 +247,6 @@ Diese Verfahren ermöglichen es, aus Konflikten während der Suche neue Klauseln
 Informationen wie engere Wertebereichsgrenzen oder Teillösungen werden zwischen den Threads kontinuierlich ausgetauscht, wodurch unterschiedliche Suchstränge voneinander profitieren können. 
 
 Während CLP(FD) inkrementell arbeitet und jede Entscheidung unmittelbar propagiert, formuliert CP-SAT das Modell kontinuierlich in eine SAT-Form um und lernt aus Konflikten.
-%Die Propagation orientiert sich dabei an Bound Consistency und SAT-Klauselpropagation, wodurch sich in vielen Fällen eine schnellere Eingrenzung des Suchraums ergibt.
 \subsection{Monotonie}
 \label{sec:monotonie}
 In SWI-Prolog CLP(FD) kann Monotonie über die Prolog-Flag \texttt{clpfd\_monotonic} aktiviert werden.  
@@ -253,16 +255,19 @@ Zusammengesetzte arithmetische Terme (z.\,B. \texttt{(1+1)}) werden abgelehnt.
 Auch ist \texttt{X \#=3} dann nicht mehr zulässig, weil zu wenig über die Variable \texttt{X} bekannt ist.   
 Dadurch können durch unterschiedliche Auswertungsreihenfolgen keine neuen Lösungen entstehen \cite{swi-clpfd-doc}.
 
-CP-SAT verfügt über keine direkte Ansteuerung des Monotonieverhaltens, aufgrund der Funktionsweise von CDCL und Lazy Clause Generation ergibt sich jedoch implizit Monotonie, da einmal abgeleitete Klauseln dauerhaft im Suchraum bestehen bleiben.
-Monotonie wird nicht explizit bei CP-SAT genannt.
+CP-SAT bietet keine explizite Einstellung für Monotonie.
+Durch CDCL und Lazy Clause Generation ergibt sich jedoch implizit monotones Verhalten im semantischen Sinn: Einmal gelernte Klauseln sind logische Konsequenzen der ursprünglichen Constraints und bleiben dauerhaft bestehen.
+Damit wird der Lösungsraum ausschließlich eingeschränkt.
+Zwar beeinflussen Heuristiken und die parallele Suche in mehreren Threads den Suchverlauf und die Laufzeit, sie können jedoch keine neuen Lösungen erzeugen oder bereits ausgeschlossene Lösungen wieder zulassen.
 \subsection{Benchmark}
 Alle Benchmarkergebnisse, weiterführende Diagramme, eine kompakte Dokumentation sowie jeglicher Quellcode sind auch auf GitHub zu finden.\footnote{Siehe \url{https://github.com/J0ne28/Vergleich-CLP-FD-und-CP-SAT}.}
-Zusammengefasste Ergebnisse sind in \autoref{tab:benchmark-nqueens} und \autoref{tab:benchmark-711} angegeben, die modellierten Probleme sind unter x und y zu finden.
+Zusammengefasste Ergebnisse sind in \autoref{tab:benchmark-nqueens} und \autoref{tab:benchmark-711} angegeben.
+Die modellierten Probleme für CP-SAT sind unter \autoref{lst:nqueens-model} und \autoref{lst:seven-eleven-cpsat}, für CLP(FD) unter \autoref{lst:nqueens-clpfd} und \autoref{lst:seven-eleven-clpfd}, angegeben.
 \label{sec:performance}
 \subsubsection{Rahmenbedingungen}
 Die Benchmarks wurden mittels eines Ryzen 7 5700X Prozessors (8 Kerne; 16 Threads; Basistakt 3,80GHz) durchgeführt.
-Es standen 32GB DDR4-3666Hz RAM zur Verfügung.
-Das zugrunde liegende Betriebssystem war Windows~11 Pro x64 (Version 23H2) unter der Energieoption \glqq Höchstleistung\grqq.
+Es standen \SI{32}{\giga\byte} DDR4-\SI{3666}{\mega\hertz} RAM zur Verfügung.
+Das zugrunde liegende Betriebssystem war Windows~11 Pro (x64) (Version 23H2) unter der Energieoption \glqq Höchstleistung\grqq.
 Verwendet wurde Python~3.11, OR-Tools~9.12.4544 und SWI-Prolog~9.2.9.
 
 Die Benchmarks erfolgten in drei Varianten, wobei CLP(FD) stets mit First-Fail und ohne weitere Konfiguration arbeitete. 
@@ -282,38 +287,49 @@ Dafür wurde \verb|model.AddDecisionStrategy| verwendet.
 Der Parameter \texttt{Seed} wurde konstant gehalten, um die Reproduzierbarkeit der Ergebnisse zu gewährleisten.
 Ohne die Festlegung eines Seeds würde CP-SAT bei jedem neuen Anlauf zum Beispiel andere Heuristik-Parameter verwenden.
 
-Gemessen wurde die tatsächlich belegte CPU-Zeit.
+Gemessen wurde die tatsächlich belegte CPU-Zeit mittels \verb|time.process_time()| in Python und \verb|statistics(cputime, T0)| in SWI-Prolog.
 Schedulingeffekte oder I/O sind also nicht in die Messung eingeflossen.
-Die kleinste Messeinheit beträgt $\frac{1}{64}$s.
+Die kleinste Messeinheit betrug $\frac{1}{64}$s.
+
 Das 7-11-Problem wurde 100-mal wiederholt, das N-Queens-Problem jeweils für jedes $N \in \{25,26,\dots,50\}$ 100-mal.
 Vor Beginn der Messungen wurden zusätzlich 5 Warmup-Läufe durchgeführt.
 Für das N-Queens-Problem wurde für jedes $N$ das arithmetische Mittel über alle Durchläufe gebildet.
 \subsubsection{Das N-Queens Problem}
-Das N-Queens-Problem wurde zum ersten Mal 1848 von M. Bezzel in der Berliner Schachzeitung beschrieben.
-Ursprünglich mit genau acht Damen beschrieben, wird es gegenwärtig auf $N$ Damen, die auf einem $N \times N$ großen Schachbrett platziert werden, generalisiert.
+Das N-Queens-Problem wurde zum ersten Mal 1848 in der Berliner Schachzeitung beschrieben.
+Ursprünglich mit genau acht Damen angegeben, wird es gegenwärtig auf $N$ Damen, die auf einem $N \times N$ großen Schachbrett platziert werden, generalisiert.
 Die Herausforderung des Problems besteht darin, dass die Damen sich nicht gegenseitig schlagen dürfen \cite{nqueens}.
 
-Aufgrund seiner einfachen Modellierung und exponentiellem Wachstum der Lösungsmenge in Abhängigkeit von $N$ eignet sich das N-Queens-Problem als Beispielproblem für diesen Benchmark.
+Aufgrund seiner einfachen Modellierung und starkem Wachstum der Lösungsmenge in Abhängigkeit von $N$ eignet sich das N-Queens-Problem als Beispielproblem für diesen Benchmark.
 Das N-Queens-Problem wird in \cite{ortools} für CP-SAT oder in \cite{drt} für CLP(FD) beispielhaft aufgeführt. 
 
 Der Fokus des N-Queens-Problems liegt bei diesem Benchmark auf der Skalierbarkeit mit wachsendem $N$.
 \subsubsection{Ergebnisse und Interpretation für N-Queens}
 
-In \autoref{tab:benchmark-nqueens} sind die Messergebnisse mittels Mittelwert und Standardabweichung für jedes N und jede Variante dargestellt.
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{plots/NQueens.png}
+  \caption{N-Queens Benchmark – Mittelwerte (100 Läufe) mit Standardabweichung.}
+  \label{fig:nqueens}
+\end{figure}
+
+\noindent
+Abbildung~\ref{fig:nqueens} verdeutlicht die Variation der Laufzeiten je nach Variante.
+Die exakten Mittelwerte und Standardabweichungen sind in Tabelle~\ref{tab:benchmark-nqueens} dokumentiert.
+
 \paragraph{Variante 1.}
 In dieser Konfiguration zeigt sich, dass sowohl CLP(FD) als auch CP-SAT Laufzeitschwankungen aufweisen können. 
 CLP(FD) produziert markante Peaks bei $N=30$ und $N=49$, die auf die statische First-Fail-Heuristik zurückzuführen sind: 
 trifft diese eine ungünstige Variablenwahl, so muss ein größerer Teil des Suchraums expandiert werden, als bei einer \glqq guten\grqq{} Variablenwahl. 
 Auch CP-SAT ist in dieser Variante nicht völlig robust gegenüber diesem Effekt und zeigt bei $N=32$ einen signifikanten Laufzeitpeak. 
-Abgesehen davon bleibt CP-SAT aber insgesamt auf einem schnelleren Niveau und arbeitet stabiler als CLP(FD).
+Abgesehen davon bleibt CP-SAT aber insgesamt auf einem schnelleren Niveau als CLP(FD).
 \paragraph{Variante 2.}
 Ohne die explizite Vorgabe einer Heuristik erzielt CP-SAT die besten Ergebnisse im Single-Thread-Betrieb. 
 Die Laufzeiten steigen mit wachsendem $N$ zwar erwartungsgemäß an, Peaks wie in Variante~1 sind jedoch geglättet. 
 Es zeigt sich, dass die dynamische Funktionsweise von CP-SAT besser skaliert als das eher statische Vorgehen von CLP(FD).
 CLP(FD) ist hier im Mittel langsamer und erreicht weniger stabile Laufzeiten.
 \paragraph{Variante 3.}
-In der multithreaded Ausführung verstärkt sich der Vorteil von CP-SAT nochmals. 
-Durch parallele Suchstränge und den Austausch von Informationen zwischen den Threads (z.\,B. bessere Schranken oder gefundene Teillösungen) werden ungünstige Heuristikentscheidungen wirksam kompensiert. 
+In der multithreaded-Ausführung verstärkt sich der Vorteil von CP-SAT nochmals. 
+Durch parallele Suchstränge und den Austausch von Informationen zwischen den Threads (z.\,B. bessere Schranken oder gefundene Teillösungen) werden ungünstige Heuristikentscheidungen oftmals kompensiert. 
 Die Laufzeiten verlaufen sehr gleichmäßig, Peaks wie bei CLP(FD) treten praktisch nicht auf. 
 CLP(FD) bleibt dagegen auch hier anfällig für starke Schwankungen und verliert deutlich an Effizienz bei einzelnen Problemgrößen. 
 \\
@@ -322,42 +338,65 @@ CLP(FD) bleibt dagegen auch hier anfällig für starke Schwankungen und verliert
 Über alle Varianten hinweg zeigt sich, dass CP-SAT im N-Queens-Benchmark die robusteren und durchgängig schnelleren Ergebnisse liefert. 
 CLP(FD) kann in einzelnen Fällen erheblich langsamer sein, da die Suche stark von der gewählten Heuristik abhängt. 
 CP-SAT profitiert besonders von seinen eingebauten Restart-Mechanismen und vom Multithreading, wodurch die Lösungssuche stabilisiert und die Laufzeit im Vergleich zu CLP(FD) signifikant reduziert wird.
-
+Damit keine Endlosschleifen entstehen, dürfen Schranken unendlicher Variablen höchstens einmal angepasst werden.
 \subsubsection{Das 7-11-Problem}
 Das 7-11-Problem wurde ursprünglich in \cite{seven_eleven} von Paul Pritchard und David Gries beschrieben.
 Es geht darum, vier Artikelpreise aus dem Sortiment eines Lebensmittelgeschäfts zu bestimmen, deren Summe 711 Cent beträgt.
-Zusätzlich muss das Produkt der Artikel $711 * 100^3$ ergeben.
+Zusätzlich muss das Produkt der Artikel $711 \cdot 100^3$ ergeben.
 Ein 4-Tupel, das beide Bedingungen erfüllt, stellt eine Lösung dar. 
 
 Das 7-11-Problem eignet sich als Benchmark, weil es trotz seiner geringen Variablenanzahl eine interessante Kombination von Constraints aufweist.
 Einerseits ist die Modellierung mit nur vier Variablen vergleichsweise einfach, andererseits erzwingt die gleichzeitige Erfüllung von Summen- und Produktbedingungen eine starke Einschränkung des Suchraums.
 Damit stellt das Problem hohe Anforderungen an die Constraint-Propagation.
 
-7-11 wird in dieser Arbeit daher eingesetzt, um den Umgang der Solver mit komplexen arithmetischen Abhängigkeiten zu untersuchen.
+7-11 wird in dieser Arbeit eingesetzt, um den Umgang der Solver mit komplexen arithmetischen Abhängigkeiten zu untersuchen.
 \subsubsection{Ergebnisse und Interpretation für 7-11}
-In \autoref{tab:benchmark-711} sind die Messergebnisse mittels Mittelwert und Standardabweichung je Variante angegeben.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{plots/711.png}
+  \caption{711 Benchmark – Mittelwerte (100 Läufe) mit Standardabweichung.}
+  \label{fig:711}
+\end{figure}
+\noindent
+Abbildung~\ref{fig:711} visualisiert die mittleren Laufzeiten mit Streuung; die zugrunde liegenden Kennzahlen (Mittelwert, Standardabweichung) sind in Tabelle~\ref{tab:benchmark-711} ausgewiesen und bilden die Grundlage der folgenden Interpretation.
 \paragraph{Variante 1.}
 Mit erzwungener First-Fail-Heuristik liefert CP-SAT im 7-11-Benchmark die durchgängig besten Ergebnisse.
-Die Laufzeiten liegen konstant im Bereich weniger Millisekunden ($\bar{x}$~0,016 s) und sind damit schneller als CLP(FD) ($\bar{x}$~0,206 s).
+Die Laufzeiten liegen konstant im Bereich weniger Millisekunden und sind damit schneller als CLP(FD).
 Die feste Variablenwahlstrategie harmoniert offenbar bei diesem stark eingeschränkten Problem sehr gut mit der Konfliktanalyse des Solvers, sodass Lösungen ohne praktisch signifikanten Suchaufwand gefunden werden konnten.
 
 \paragraph{Variante 2.}
 Ohne explizite Vorgabe einer Heuristik ist CP-SAT hier deutlich langsamer als in Variante 1.
-Mit $\bar{x}$~0,698 s liegt die Laufzeit über der von CLP(FD) und schwankt zwischen 0,42 und 0,92 s.
-Bei einem kleinen, stark arithmetisch eingeschränkten Modell wie 7-11 und der limitierten Thread-Anzahl greifen die internen Restart- und Portfolio-Heuristiken weniger effizient, sodass vergleichsweise viel Suchraum exploriert wird.
+Die Laufzeit liegt deutlich über der von CLP(FD) und zeigt eine starke Schwankung.
+Bei einem kleinen, stark arithmetisch eingeschränkten Modell wie 7-11 und der limitierten Thread-Anzahl greifen die automatisch gewählten Heuristiken weniger effizient, sodass vergleichsweise viel Suchraum exploriert wird.
 
 \paragraph{Variante 3.}
-Die multithreaded-Ausführung reduziert die mittlere Laufzeit ($\bar{x}$~0,255 s) im Vergleich zu Variante 2, bleibt aber weiterhin über CLP(FD).
-Während einzelne Läufe sehr schnell abgeschlossen werden, treten auch sporadische Ausreißer oberhalb von 0,4 s auf.
+Die multithreaded-Ausführung reduziert die mittlere Laufzeit im Vergleich zu Variante 2, bleibt aber weiterhin über CLP(FD).
+Während einzelne Läufe schnell abgeschlossen werden, treten auch sporadische Ausreißer auf.
 Der Portfolio-Ansatz gleicht ungünstige Entscheidungen teilweise aus, bringt bei so kleinen Instanzen jedoch keinen durchgängig stabilen Vorteil.
 \\
 
 \noindent
 Beim 7-11-Problem hängt die Performance von CP-SAT stark von der Konfiguration ab: Mit First-Fail (Variante 1) ist der Solver überlegen und schlägt CLP(FD).
 Ohne Strategie (Variante 2) ist er dagegen langsamer als CLP(FD), die Multithread-Variante (Variante 3) verbessert die Laufzeit etwas.
-CLP(FD) liefert stabile Resultate, erreicht aber nicht die Leistung eines, wie in Variante 1, optimal konfigurierten CP-SAT.
+CLP(FD) liefert stabile Resultate, erreicht aber nicht die Leistung eines, wie in Variante 1, gut konfigurierten CP-SAT.
 \section{Einordnung und Fazit}
-Bababa
+CLP(FD) ermöglicht eine vergleichsweise einfache Modellierung und legt großen Wert auf formale Korrektheit.
+Dadurch eignet es sich vor allem für den Einsatz in der Lehre und wird dort auch aktiv verwendet \cite{drt}.
+Da CLP(FD) nativ in SWI-Prolog implementiert und dort unmittelbar nutzbar ist, lässt sich die Bibliothek flexibel anpassen und in bestehende Prolog-Programme integrieren.
+Die eingesetzten Techniken und Verfahren basieren überwiegend auf den klassischen Ansätzen des Constraint-Solvings.
+
+CP-SAT beziehungsweise OR-Tools erfordert demgegenüber eine eher gewöhnungsbedürftige Modellierung, da deklarative Konzepte in einer imperativen Sprache umgesetzt werden.
+Diese Einschätzung hängt jedoch vom Nutzer ab.
+Außerdem wurde in dieser Arbeit nur CP-SAT in Kombination mit Python betrachtet, die Erfahrung kann also je nach gewählter Sprache variieren. 
+Der Solver bietet eine größere Zahl an Konfigurationsmöglichkeiten, kombiniert verschiedene Verfahren und unterstützt Multithreading.
+
+Die durchgeführten Benchmarks erlauben eine erste vergleichende Einschätzung der Solver.
+In den Benchmarks zeigte sich, dass CP-SAT in vielen Fällen schnellere und stabilere Ergebnisse liefert, während CLP(FD) trotz seines geringeren Funktionsumfangs in einzelnen Szenarien vergleichbare oder sogar bessere Ergebnisse erreichen kann.
+Für eine umfassendere Beurteilung könnten jedoch weitere Aspekte berücksichtigt werden, etwa das Speicherverhalten oder die Stabilität bei sehr großen Instanzen.
+Ebenso wäre es interessant, die Systeme anhand praxisnäherer Anwendungsprobleme -- beispielsweise aus dem Bereich Scheduling oder Routing -- zu testen.
+Solche Erweiterungen würden eine noch differenziertere Bewertung ermöglichen, gehen jedoch über den Rahmen dieser Seminararbeit hinaus.
+
+Insgesamt wird deutlich, dass die Eignung eines Solvers vom jeweiligen Kontext abhängt: CLP(FD) ist für transparente Modellierung und Lehre gut geeignet, während CP-SAT in Anwendungsszenarien mit höheren Anforderungen an Leistung und Flexibilität Vorteile aufweist.
 \section{Anhang}
 \begin{table}[H]
 \centering
@@ -409,12 +448,110 @@ $N$ & CLP(FD) & Variante 1 & Variante 2 & Variante 3 \\
 CLP(FD) & Variante 1 & Variante 2 & Variante 3 \\
 $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ & $\bar{x} \pm \sigma$ \\
 \midrule
-0.206 $\pm$ 0.049 & 0.698 $\pm$ 0.111 & 0.016 $\pm$ 0.011 & 0.255 $\pm$ 0.071 \\
+0.206 $\pm$ 0.049 & 0.016 $\pm$ 0.011 & 0.698 $\pm$ 0.111 & 0.255 $\pm$ 0.071 \\
 \bottomrule
 \end{tabular}
 \caption{Laufzeiten für das 7-11-Problem (Mittelwert $\bar{x}$ und Standardabweichung $\sigma$) für CLP(FD) und CP-SAT-Varianten.}
 \label{tab:benchmark-711}
 \end{table}
+\lstset{
+  language=Python,
+  numbers=left,
+  numbersep=5pt,
+  frame=lines,
+  xleftmargin=5mm,
+  linewidth=\dimexpr\linewidth-5mm\relax,
+  basicstyle=\ttfamily\small,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  tabsize=2,
+  breaklines=true,
+  breakatwhitespace=false,
+  captionpos=b,
+  postbreak=\mbox{$\hookrightarrow$\space}
+}
+\captionsetup[lstlisting]{justification=raggedright,singlelinecheck=false}
+
+\begin{lstlisting}[caption={N-Queens in CP-SAT -- Modellierung und Lösung},label={lst:nqueens-model}]
+from ortools.sat.python import cp_model
+
+def n_queens_cpsat(n: int) -> bool:
+    model = cp_model.CpModel()
+    Q  = [model.NewIntVar(0, n-1, f"q_{i}")      for i in range(n)]
+    d1 = [model.NewIntVar(0, 2*n-2, f"d1_{i}")   for i in range(n)]
+    d2 = [model.NewIntVar(0, 2*n-2, f"d2_{i}")   for i in range(n)]
+    model.AddAllDifferent(Q)
+    for i in range(n):
+        model.Add(d1[i] == Q[i] + i)
+        model.Add(d2[i] == Q[i] - i + (n-1))
+    model.AddAllDifferent(d1)
+    model.AddAllDifferent(d2)
+    solver = cp_model.CpSolver()
+    solver.parameters.random_seed = 12345
+    return solver.Solve(model) in (cp_model.OPTIMAL, cp_model.FEASIBLE)
+\end{lstlisting}
+
+\begin{lstlisting}[language=Prolog,
+  caption={N-Queens in CLP(FD) -- Modellierung und Lösung},
+  label={lst:nqueens-clpfd}]
+:- use_module(library(clpfd)).
+
+queens(N, Qs) :-
+    length(Qs, N),
+    Qs ins 1..N,
+    all_distinct(Qs),
+    safe_diagonals(Qs),
+    labeling([ff], Qs).
+
+safe_diagonals(Qs) :-
+    length(Qs, N),
+    numlist(1, N, Is),
+    maplist(sum_index,  Qs, Is, D1),
+    maplist(diff_index, Qs, Is, D2),
+    all_distinct(D1),
+    all_distinct(D2).
+
+sum_index(Q, I, S)  :- S #= Q + I.
+diff_index(Q, I, D) :- D #= Q - I.
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,
+  caption={7--11 in CP-SAT -- Modellierung und Lösung},
+  label={lst:seven-eleven-cpsat}]
+from ortools.sat.python import cp_model
+
+def seven_eleven():
+    m = cp_model.CpModel()
+    max_price = 711
+    p = [m.NewIntVar(1, max_price, f"p{i}") for i in range(4)]
+    m.Add(sum(p) == 711)
+    target = 711 * 100**3
+    prod = m.NewIntVar(1, target, "prod")
+    m.AddMultiplicationEquality(prod, p)
+    m.Add(prod == target)
+    s = cp_model.CpSolver()
+    s.parameters.random_seed = 12345
+    status = s.Solve(m)
+    if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return [s.Value(x) for x in p]
+    return None
+\end{lstlisting}
+
+\begin{lstlisting}[language=Prolog,
+  caption={7--11 in CLP(FD) -- Modellierung und Lösung},
+  label={lst:seven-eleven-clpfd}]
+:- use_module(library(clpfd)).
+
+seven_eleven(Vars) :-
+    Vars = [A,B,C,D],
+    Vars ins 1..711,
+    A + B + C + D #= 711,
+    A * B * C * D #= 711*100^3,
+    labeling([ff], Vars).
+\end{lstlisting}
+
+
 
 \section{Literaturverzeichnis}
 \renewcommand*{\bibname}{} % für Bücher (report, book, etc.)
