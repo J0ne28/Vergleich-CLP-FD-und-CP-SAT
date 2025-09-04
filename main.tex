@@ -283,7 +283,10 @@ Die folgenden Varianten wurden getestet:
 \end{itemize}
 \noindent
 Da First-Fail bei CP-SAT nicht existiert, wurde die Strategie explizit nachgebildet.
-Dafür wurde \verb|model.AddDecisionStrategy| verwendet.
+Dafür wurde \verb|model.AddDecisionStrategy()| kombiniert mit \texttt{CHOOSE\_MIN\_DOMAIN\_SIZE} (kleinster Wertebereich) und \texttt{SELECT\_MIN\_VALUE} (kleinster Wert) verwendet.
+Die konkrete Implementierung ist unter \autoref{lst:ff-in-python} angegeben.
+Wichtig zu erwähnen ist jedoch, dass sich CP-SAT durch Neustarts oder Lernmechanismen dennoch abweichend verhalten kann.
+
 Der Parameter \texttt{Seed} wurde konstant gehalten, um die Reproduzierbarkeit der Ergebnisse zu gewährleisten.
 Ohne die Festlegung eines Seeds würde CP-SAT bei jedem neuen Anlauf zum Beispiel andere Heuristik-Parameter verwenden.
 
@@ -551,6 +554,14 @@ seven_eleven(Vars) :-
     labeling([ff], Vars).
 \end{lstlisting}
 
+\begin{lstlisting}[language=Python,
+  caption={First-Fail-Nachbildung in Python},
+  label={lst:ff-in-python}]
+from ortools.sat.python import cp_model
+
+model = cp_model.CpModel()
+model.AddDecisionStrategy(Var,  cp_model.CHOOSE_MIN_DOMAIN_SIZE, cp_model.SELECT_MIN_VALUE)
+\end{lstlisting}
 
 
 \section{Literaturverzeichnis}
